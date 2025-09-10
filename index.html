@@ -92,27 +92,40 @@
   <div id="loading">Carregando...</div>
 
   <script>
-    const ENDPOINT = "https://script.google.com/macros/s/AKfycbwBgdgW5qBkaSSWLNTGc-oACJ-QAy_WOAyhYOKn0hdYYHD7HPkSLg3AE1QPxldp2hgJ/exec"; // <<< troque pelo seu WebApp do GAS
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbwYHmAKrTlfd2rG4-hP-1Ve26Tjkgt1BSC7oN6Skn7Tsm_a-oiqYd9RJ5eUQ5pKuq5yaQ/exec"; // <<< troque pelo seu WebApp do GAS
     const tabela = document.querySelector("#tabelaRequisicoes tbody");
     const loading = document.getElementById("loading");
 
     function showLoading(show){ loading.style.display = show ? "flex" : "none"; }
     function applyColor(select){ select.className = "statusSelect status-" + select.value; }
 
-    function renderTabela(lista){
-      tabela.innerHTML = "";
-      lista.forEach((r)=>{
-        const obj = {
-          id: r.id,
-          timestamp: r.data,
-          produto: r.produto,
-          unidade: r.unidade,
-          quantidade: r.quantidade,
-          setor: r.setor,
-          solicitante: r.solicitante,
-          observacoes: r.observacoes,
-          status: r.status
-        };
+  function renderTabela(lista){
+  tabela.innerHTML = "";
+  lista.forEach((obj)=>{
+    const tr = document.createElement("tr");
+    tr.setAttribute("data-id", obj.id);
+    tr.innerHTML = `
+      <td>${obj.data}</td>
+      <td>${obj.solicitante||""}</td>
+      <td>${obj.setor||""}</td>
+      <td>${obj.produto||""}</td>
+      <td>${obj.quantidade||""}</td>
+      <td>${obj.unidade||""}</td>
+      <td>
+        <select class="statusSelect">
+          <option value="PROCESSANDO" ${obj.status==="PROCESSANDO"?"selected":""}>PROCESSANDO</option>
+          <option value="PENDENTE" ${obj.status==="PENDENTE"?"selected":""}>PENDENTE</option>
+          <option value="NEGAR" ${obj.status==="NEGAR"?"selected":""}>NEGAR</option>
+          <option value="ENTREGUE" ${obj.status==="ENTREGUE"?"selected":""}>ENTREGUE</option>
+        </select>
+      </td>
+      <td><button class="btn-comprar">COMPRAR</button></td>
+    `;
+    tabela.appendChild(tr);
+  });
+  inicializarEventos();
+}
+
 
         const tr = document.createElement("tr");
         tr.setAttribute("data-id", obj.id);
