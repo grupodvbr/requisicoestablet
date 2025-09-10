@@ -3,34 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <title>Painel do Estoquista - Requisições</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     :root {
       --bg:#f6f7fb; --surface:#fff; --text:#0f172a; --line:#e5e7eb;
-      --blue:#2563eb; --danger:#dc2626; --green:#16a34a; --yellow:#f59e0b;
+      --blue:#2563eb; --danger:#dc2626; --green:#16a34a; --yellow:#f59e0b; --gray:#9ca3af;
     }
-    body { font-family: Arial, sans-serif; background: var(--bg); margin:0; padding:20px; color:var(--text);}
-    h2 { text-align:center; margin-bottom:20px; }
-    .filtros { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; justify-content:center; }
+    body { font-family: Arial, sans-serif; background: var(--bg); margin:0; padding:10px; color:var(--text);}
+    h2 { text-align:center; margin:10px 0 20px; font-size:1.5rem; }
+
+    /* filtros */
+    .filtros { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px; justify-content:center; }
     .filtros select, .filtros input {
-      padding:6px 10px; border:1px solid var(--line); border-radius:6px;
+      padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:0.95rem;
     }
-    table { width:100%; border-collapse:collapse; background:var(--surface); box-shadow:0 2px 8px rgba(0,0,0,.08); border-radius:8px; overflow:hidden; }
-    th, td { padding:10px; border-bottom:1px solid var(--line); text-align:left; }
-    th { background:var(--blue); color:#fff; }
-    select.statusSelect { padding:6px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
+
+    /* tabela */
+    table { width:100%; border-collapse:collapse; background:var(--surface); box-shadow:0 2px 8px rgba(0,0,0,.08); border-radius:10px; overflow:hidden; }
+    th, td { padding:12px; border-bottom:1px solid var(--line); text-align:left; font-size:0.95rem; }
+    th { background:var(--blue); color:#fff; font-size:1rem; }
+
+    /* status select */
+    select.statusSelect { padding:6px 10px; border-radius:8px; font-weight:bold; cursor:pointer; }
+    .status-PROCESSANDO { background:#dbeafe; color:#1e40af; }
     .status-PENDENTE { background:#fef3c7; color:#92400e; }
     .status-NEGAR { background:#fee2e2; color:#991b1b; }
     .status-ENTREGUE { background:#dcfce7; color:#166534; }
+    .status-COMPRAR { background:#f3e8ff; color:#6b21a8; }
+
+    /* botão comprar */
     .btn-comprar {
-      padding:6px 14px; border:none; border-radius:6px; cursor:pointer;
-      font-weight:bold; background:var(--blue); color:#fff; transition:.2s;
+      padding:8px 16px; border:none; border-radius:8px; cursor:pointer;
+      font-weight:bold; background:var(--blue); color:#fff; transition:.2s; font-size:0.9rem;
     }
     .btn-comprar:hover { background:#1d4ed8; }
+
+    /* loading */
     #loading {
       display:none; position:fixed; inset:0; background:rgba(255,255,255,0.7);
       z-index:999; justify-content:center; align-items:center;
-      font-size:18px; color:var(--blue); font-weight:bold;
+      font-size:20px; color:var(--blue); font-weight:bold;
+    }
+
+    /* responsivo tablet */
+    @media (max-width: 1024px) {
+      th, td { font-size:0.85rem; padding:8px; }
+      h2 { font-size:1.2rem; }
+      .btn-comprar { padding:6px 12px; font-size:0.8rem; }
+      select.statusSelect { font-size:0.8rem; }
     }
   </style>
 </head>
@@ -43,8 +63,9 @@
     <select id="filtroSolicitante"><option value="">Todos Solicitantes</option></select>
     <select id="filtroSetor"><option value="">Todos Setores</option></select>
     <select id="filtroStatus">
-      <option value="PENDENTE">Pendentes</option>
+      <option value="PROCESSANDO">Processando</option>
       <option value="">Todos</option>
+      <option value="PENDENTE">Pendentes</option>
       <option value="NEGAR">Negados</option>
       <option value="ENTREGUE">Entregues</option>
       <option value="COMPRAR">Compras</option>
@@ -71,7 +92,7 @@
   <div id="loading">Carregando...</div>
 
   <script>
-    const ENDPOINT = "https://script.google.com/macros/s/AKfycbwj5_YgQiY4eeTtzvGLrVYlsWqOmT52W5hZLmoN3cWD6V5ravYo3lCbpQgKUMFgTzYcmg/exec"; // exemplo: https://script.google.com/macros/s/AKfycbx123/exec
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbyXWAzwlAYOZoVsjHXrpOl2q1HQ3uDwF4_5aDvC2sHd1sbufyxLVXxr1hMbsOZsdm7dwg/exec";
     const tabela = document.querySelector("#tabelaRequisicoes tbody");
     const loading = document.getElementById("loading");
 
@@ -113,6 +134,7 @@
           <td>${obj.unidade||""}</td>
           <td>
             <select class="statusSelect">
+              <option value="PROCESSANDO" ${obj.status==="PROCESSANDO"?"selected":""}>PROCESSANDO</option>
               <option value="PENDENTE" ${obj.status==="PENDENTE"?"selected":""}>PENDENTE</option>
               <option value="NEGAR" ${obj.status==="NEGAR"?"selected":""}>NEGAR</option>
               <option value="ENTREGUE" ${obj.status==="ENTREGUE"?"selected":""}>ENTREGUE</option>
@@ -144,7 +166,8 @@
 
     function carregarDados(){
       showLoading(true);
-      fetch(ENDPOINT + "?action=listar_requisicoes&status=PENDENTE")
+      const statusPadrao = "PROCESSANDO";
+      fetch(ENDPOINT + "?action=listar_requisicoes&status=" + statusPadrao)
         .then(r=>r.json())
         .then(data=>{
           renderTabela(data);
