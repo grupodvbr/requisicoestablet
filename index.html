@@ -11,27 +11,22 @@
     }
     body { font-family: Arial, sans-serif; background: var(--bg); margin:0; padding:20px; color:var(--text);}
     h2 { text-align:center; margin-bottom:20px; }
-
     .filtros { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; justify-content:center; }
     .filtros select, .filtros input {
       padding:6px 10px; border:1px solid var(--line); border-radius:6px;
     }
-
     table { width:100%; border-collapse:collapse; background:var(--surface); box-shadow:0 2px 8px rgba(0,0,0,.08); border-radius:8px; overflow:hidden; }
     th, td { padding:10px; border-bottom:1px solid var(--line); text-align:left; }
     th { background:var(--blue); color:#fff; }
-
     select.statusSelect { padding:6px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
     .status-PENDENTE { background:#fef3c7; color:#92400e; }
     .status-NEGAR { background:#fee2e2; color:#991b1b; }
     .status-ENTREGUE { background:#dcfce7; color:#166534; }
-
     .btn-comprar {
       padding:6px 14px; border:none; border-radius:6px; cursor:pointer;
       font-weight:bold; background:var(--blue); color:#fff; transition:.2s;
     }
     .btn-comprar:hover { background:#1d4ed8; }
-
     #loading {
       display:none; position:fixed; inset:0; background:rgba(255,255,255,0.7);
       z-index:999; justify-content:center; align-items:center;
@@ -73,35 +68,54 @@
     <tbody></tbody>
   </table>
 
-  <!-- Loading -->
   <div id="loading">Carregando...</div>
 
   <script>
-    const ENDPOINT = "https://script.google.com/macros/s/AKfycbzjVWXyGuwLDEfqNwgJppU2Yvo3_r_L7wbD1-AXfd3lztOUlq5zbKTQ0QCP7IknVae4TA/exec"; // ex: https://script.google.com/macros/s/AKfycbx123/exec
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbzjVWXyGuwLDEfqNwgJppU2Yvo3_r_L7wbD1-AXfd3lztOUlq5zbKTQ0QCP7IknVae4TA/exec"; // exemplo: https://script.google.com/macros/s/AKfycbx123/exec
     const tabela = document.querySelector("#tabelaRequisicoes tbody");
     const loading = document.getElementById("loading");
 
     function showLoading(show){ loading.style.display = show ? "flex" : "none"; }
     function applyColor(select){ select.className = "statusSelect status-" + select.value; }
 
-    // renderizar linhas
+    // Converter ISO → dd/MM/yyyy HH:mm
+    function formatarDataHora(iso){
+      if(!iso) return "";
+      const d = new Date(iso);
+      const data = d.toLocaleDateString("pt-BR");
+      const hora = d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+      return `${data} ${hora}`;
+    }
+
     function renderTabela(lista){
       tabela.innerHTML = "";
-      lista.forEach(item=>{
+      lista.forEach((r,i)=>{
+        const obj = {
+          id: i+2, // linha na planilha
+          timestamp: formatarDataHora(r[0]),
+          produto: r[1],
+          unidade: r[2],
+          quantidade: r[3],
+          setor: r[4],
+          solicitante: r[5],
+          observacoes: r[6],
+          status: r[7]
+        };
+
         const tr = document.createElement("tr");
-        tr.setAttribute("data-id", item.id);
+        tr.setAttribute("data-id", obj.id);
         tr.innerHTML = `
-          <td>${item.data||""} ${item.hora||""}</td>
-          <td>${item.solicitante||""}</td>
-          <td>${item.setor||""}</td>
-          <td>${item.produto||""}</td>
-          <td>${item.quantidade||""}</td>
-          <td>${item.unidade||""}</td>
+          <td>${obj.timestamp}</td>
+          <td>${obj.solicitante||""}</td>
+          <td>${obj.setor||""}</td>
+          <td>${obj.produto||""}</td>
+          <td>${obj.quantidade||""}</td>
+          <td>${obj.unidade||""}</td>
           <td>
             <select class="statusSelect">
-              <option value="PENDENTE" ${item.status==="PENDENTE"?"selected":""}>PENDENTE</option>
-              <option value="NEGAR" ${item.status==="NEGAR"?"selected":""}>NEGAR</option>
-              <option value="ENTREGUE" ${item.status==="ENTREGUE"?"selected":""}>ENTREGUE</option>
+              <option value="PENDENTE" ${obj.status==="PENDENTE"?"selected":""}>PENDENTE</option>
+              <option value="NEGAR" ${obj.status==="NEGAR"?"selected":""}>NEGAR</option>
+              <option value="ENTREGUE" ${obj.status==="ENTREGUE"?"selected":""}>ENTREGUE</option>
             </select>
           </td>
           <td><button class="btn-comprar">COMPRAR</button></td>
@@ -130,8 +144,7 @@
 
     function carregarDados(){
       showLoading(true);
-      const status = document.getElementById("filtroStatus").value || "PENDENTE";
-      fetch(ENDPOINT + "?action=listar_requisicoes&status=" + status)
+      fetch(ENDPOINT + "?action=listar_requisicoes&status=PENDENTE")
         .then(r=>r.json())
         .then(data=>{
           renderTabela(data);
@@ -162,8 +175,8 @@
     }
 
     function preencherFiltros(data){
-      const solicitantes = [...new Set(data.map(r=>r.solicitante))].filter(Boolean);
-      const setores = [...new Set(data.map(r=>r.setor))].filter(Boolean);
+      const solicitantes = [...new Set(data.map(r=>r[5]))].filter(Boolean);
+      const setores = [...new Set(data.map(r=>r[4]))].filter(Boolean);
       preencherSelect("filtroSolicitante",solicitantes);
       preencherSelect("filtroSetor",setores);
     }
