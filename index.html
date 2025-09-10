@@ -9,37 +9,20 @@
       --bg:#f6f7fb; --surface:#fff; --text:#0f172a; --line:#e5e7eb;
       --blue:#2563eb; --danger:#dc2626; --green:#16a34a; --yellow:#f59e0b;
     }
-    body {
-      font-family: Arial, sans-serif;
-      background: var(--bg); margin:0; padding:20px; color:var(--text);
-    }
+    body { font-family: Arial, sans-serif; background: var(--bg); margin:0; padding:20px; color:var(--text);}
     h2 { text-align:center; margin-bottom:20px; }
     .filtros { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
-    .filtros select, .filtros input {
-      padding:6px 10px; border:1px solid var(--line); border-radius:6px;
-    }
-    table {
-      width:100%; border-collapse:collapse; background:var(--surface);
-      box-shadow:0 2px 8px rgba(0,0,0,.08); border-radius:8px; overflow:hidden;
-    }
+    .filtros select, .filtros input { padding:6px 10px; border:1px solid var(--line); border-radius:6px; }
+    table { width:100%; border-collapse:collapse; background:var(--surface); box-shadow:0 2px 8px rgba(0,0,0,.08); border-radius:8px; overflow:hidden; }
     th, td { padding:10px; border-bottom:1px solid var(--line); text-align:left; }
     th { background:var(--blue); color:#fff; }
-    select.statusSelect {
-      padding:6px 10px; border-radius:6px; font-weight:bold; cursor:pointer;
-    }
+    select.statusSelect { padding:6px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
     .status-PENDENTE { background:#fef3c7; color:#92400e; }
     .status-NEGAR { background:#fee2e2; color:#991b1b; }
     .status-ENTREGUE { background:#dcfce7; color:#166534; }
-    .btn-comprar {
-      padding:6px 14px; border:none; border-radius:6px; cursor:pointer;
-      font-weight:bold; background:var(--blue); color:#fff; transition:.2s;
-    }
+    .btn-comprar { padding:6px 14px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; background:var(--blue); color:#fff; transition:.2s; }
     .btn-comprar:hover { background:#1d4ed8; }
-    #loading {
-      display:none; position:fixed; inset:0; background:rgba(255,255,255,0.7);
-      z-index:999; justify-content:center; align-items:center;
-      font-size:18px; color:var(--blue); font-weight:bold;
-    }
+    #loading { display:none; position:fixed; inset:0; background:rgba(255,255,255,0.7); z-index:999; justify-content:center; align-items:center; font-size:18px; color:var(--blue); font-weight:bold; }
   </style>
 </head>
 <body>
@@ -68,6 +51,7 @@
         <th>Setor</th>
         <th>Produto</th>
         <th>Quantidade</th>
+        <th>Unidade</th>
         <th>Status</th>
         <th>Ações</th>
       </tr>
@@ -79,7 +63,7 @@
   <div id="loading">Carregando...</div>
 
   <script>
-    const ENDPOINT = "https://script.google.com/macros/s/AKfycbyTIKEAmujIRhMS5KVfow-LHIitdhh4v0TyIsCqtaDb1sFYOJORX59z76Xyffp0__Y/exec"; // troque pela URL do Apps Script
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbwkiBNH2N6s5UiuqGv6U69veZJpdIg731Jny-iATXD6TUBr63wJsxbQeKJhsgkl8yp0/exec"; // exemplo: https://script.google.com/macros/s/AKfycbx123/exec
     const tabela = document.querySelector("#tabelaRequisicoes tbody");
     const loading = document.getElementById("loading");
 
@@ -93,11 +77,12 @@
         const tr = document.createElement("tr");
         tr.setAttribute("data-id", item.id);
         tr.innerHTML = `
-          <td>${item.data}</td>
-          <td>${item.solicitante}</td>
-          <td>${item.setor}</td>
-          <td>${item.produto}</td>
-          <td>${item.qtd}</td>
+          <td>${item.timestamp||""}</td>
+          <td>${item.solicitante||""}</td>
+          <td>${item.setor||""}</td>
+          <td>${item.produto||""}</td>
+          <td>${item.quantidade||""}</td>
+          <td>${item.unidade||""}</td>
           <td>
             <select class="statusSelect">
               <option value="PENDENTE" ${item.status==="PENDENTE"?"selected":""}>PENDENTE</option>
@@ -105,14 +90,13 @@
               <option value="ENTREGUE" ${item.status==="ENTREGUE"?"selected":""}>ENTREGUE</option>
             </select>
           </td>
-          <td><button class="btn-comprar ${item.comprar==="SIM"?"ativo":""}">COMPRAR</button></td>
+          <td><button class="btn-comprar">COMPRAR</button></td>
         `;
         tabela.appendChild(tr);
       });
       inicializarEventos();
     }
 
-    // inicializa eventos pós-render
     function inicializarEventos(){
       document.querySelectorAll(".statusSelect").forEach(select=>{
         applyColor(select);
@@ -130,13 +114,13 @@
       });
     }
 
-    // carregar dados do GAS
     function carregarDados(){
       showLoading(true);
-      fetch(ENDPOINT)
+      fetch(ENDPOINT + "?action=listar_requisicoes&status=PENDENTE")
         .then(r=>r.json())
         .then(data=>{
-          aplicarFiltros(data);
+          renderTabela(data);
+          preencherFiltros(data);
           showLoading(false);
         })
         .catch(err=>{
@@ -146,13 +130,12 @@
         });
     }
 
-    // atualizar status na planilha
     function atualizarStatus(id,status){
       showLoading(true);
       fetch(ENDPOINT,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({id:id,status:status})
+        body:JSON.stringify({action:"atualizar_status",id:id,status:status})
       })
       .then(r=>r.json())
       .then(()=>carregarDados())
@@ -163,27 +146,11 @@
       });
     }
 
-    // aplicar filtros locais
-    function aplicarFiltros(data){
-      const fData = document.getElementById("filtroData").value;
-      const fSolic = document.getElementById("filtroSolicitante").value;
-      const fSetor = document.getElementById("filtroSetor").value;
-      const fStatus = document.getElementById("filtroStatus").value;
-
-      let filtrado = data;
-      if(fData) filtrado = filtrado.filter(r=>r.data===fData);
-      if(fSolic) filtrado = filtrado.filter(r=>r.solicitante===fSolic);
-      if(fSetor) filtrado = filtrado.filter(r=>r.setor===fSetor);
-      if(fStatus) {
-        if(fStatus==="COMPRAR") filtrado = filtrado.filter(r=>r.comprar==="SIM");
-        else filtrado = filtrado.filter(r=>r.status===fStatus);
-      }
-
-      renderTabela(filtrado);
-
-      // preencher filtros dinâmicos
-      preencherSelect("filtroSolicitante",[...new Set(data.map(r=>r.solicitante))]);
-      preencherSelect("filtroSetor",[...new Set(data.map(r=>r.setor))]);
+    function preencherFiltros(data){
+      const solicitantes = [...new Set(data.map(r=>r.solicitante))];
+      const setores = [...new Set(data.map(r=>r.setor))];
+      preencherSelect("filtroSolicitante",solicitantes);
+      preencherSelect("filtroSetor",setores);
     }
 
     function preencherSelect(id,values){
@@ -194,16 +161,11 @@
       sel.value = current;
     }
 
-    // eventos filtros
     document.querySelectorAll(".filtros select, .filtros input").forEach(el=>{
       el.addEventListener("change",carregarDados);
     });
 
-    // inicia: filtro padrão = PENDENTE
-    window.onload = ()=>{
-      document.getElementById("filtroStatus").value = "PENDENTE";
-      carregarDados();
-    };
+    window.onload = carregarDados;
   </script>
 </body>
 </html>
