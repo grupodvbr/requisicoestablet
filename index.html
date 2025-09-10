@@ -2,47 +2,65 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Painel de Requisições</title>
+  <title>Painel de Requisições - DELÍCIA GOURMET</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    :root {
+      --bg:#f6f7fb; 
+      --surface:#fff; 
+      --text:#0f172a; 
+      --line:#e5e7eb;
+      --blue:#2563eb; 
+      --danger:#dc2626;
+      --green:#16a34a;
+      --yellow:#f59e0b;
+    }
     body {
       font-family: Arial, sans-serif;
-      background: #f6f7fb;
+      background: var(--bg);
       margin: 0;
       padding: 20px;
+      color: var(--text);
     }
     h2 {
       text-align: center;
-      color: #0f172a;
       margin-bottom: 20px;
+    }
+    .filtros {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filtros select, .filtros input {
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+      background: var(--surface);
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
       border-radius: 8px;
       overflow: hidden;
     }
     th, td {
-      padding: 12px;
-      border-bottom: 1px solid #e5e7eb;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
       text-align: left;
     }
     th {
-      background: #2563eb;
+      background: var(--blue);
       color: #fff;
-      text-transform: uppercase;
-      font-size: 14px;
     }
-    select {
+    select.statusSelect {
       padding: 6px 10px;
       border-radius: 6px;
-      border: 1px solid #ccc;
-      cursor: pointer;
       font-weight: bold;
+      cursor: pointer;
     }
-    /* cores por status */
+    /* cores dos selects */
     .status-PENDENTE { background: #fef3c7; color: #92400e; }
     .status-NEGAR { background: #fee2e2; color: #991b1b; }
     .status-ENTREGUE { background: #dcfce7; color: #166534; }
@@ -54,7 +72,7 @@
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
-      background: #2563eb;
+      background: var(--blue);
       color: #fff;
       transition: 0.2s;
     }
@@ -62,17 +80,17 @@
       background: #1d4ed8;
     }
 
-    /* loading */
-    .loading {
+    /* overlay de loading */
+    #loading {
       display: none;
       position: fixed;
-      top:0; left:0; right:0; bottom:0;
+      inset: 0;
       background: rgba(255,255,255,0.7);
       z-index: 999;
       justify-content: center;
       align-items: center;
       font-size: 18px;
-      color: #2563eb;
+      color: var(--blue);
       font-weight: bold;
     }
   </style>
@@ -80,11 +98,31 @@
 <body>
   <h2>Painel de Requisições</h2>
 
-  <div class="loading" id="loading">Atualizando...</div>
+  <!-- Filtros -->
+  <div class="filtros">
+    <input type="date" id="filtroData">
+    <select id="filtroSolicitante">
+      <option value="">Todos Solicitantes</option>
+    </select>
+    <select id="filtroSetor">
+      <option value="">Todos Setores</option>
+    </select>
+    <select id="filtroStatus">
+      <option value="">Todos Status</option>
+      <option value="PENDENTE">PENDENTE</option>
+      <option value="NEGAR">NEGAR</option>
+      <option value="ENTREGUE">ENTREGUE</option>
+      <option value="COMPRAR">COMPRAR</option>
+    </select>
+  </div>
 
+  <!-- Tabela -->
   <table id="tabelaRequisicoes">
     <thead>
       <tr>
+        <th>Data</th>
+        <th>Solicitante</th>
+        <th>Setor</th>
         <th>Produto</th>
         <th>Quantidade</th>
         <th>Status</th>
@@ -92,96 +130,104 @@
       </tr>
     </thead>
     <tbody>
-      <!-- Exemplo de registros -->
-      <tr data-id="1">
-        <td>Arroz 5kg</td>
-        <td>10</td>
-        <td>
-          <select class="statusSelect">
-            <option value="PENDENTE">PENDENTE</option>
-            <option value="NEGAR">NEGAR</option>
-            <option value="ENTREGUE">ENTREGUE</option>
-          </select>
-        </td>
-        <td>
-          <button class="btn-comprar">COMPRAR</button>
-        </td>
-      </tr>
-      <tr data-id="2">
-        <td>Feijão 1kg</td>
-        <td>20</td>
-        <td>
-          <select class="statusSelect">
-            <option value="PENDENTE">PENDENTE</option>
-            <option value="NEGAR">NEGAR</option>
-            <option value="ENTREGUE">ENTREGUE</option>
-          </select>
-        </td>
-        <td>
-          <button class="btn-comprar">COMPRAR</button>
-        </td>
-      </tr>
+      <!-- Linhas serão carregadas via JS -->
     </tbody>
   </table>
 
-  <script>
-    const ENDPOINT = "https://script.google.com/macros/s/AKfycbyXFEAq56G7oQdeCzGw_SdOnQ7XkRPMzBoS1V09Pkk_wI916FGO9nn4e9FfeNmv8KV9KA/exec"; // coloque sua URL do Apps Script aqui
+  <!-- Loading -->
+  <div id="loading">Atualizando...</div>
 
+  <script>
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbyXFEAq56G7oQdeCzGw_SdOnQ7XkRPMzBoS1V09Pkk_wI916FGO9nn4e9FfeNmv8KV9KA/exec"; // troque pela URL do Apps Script
+    const tabela = document.querySelector("#tabelaRequisicoes tbody");
     const loading = document.getElementById("loading");
 
     function showLoading(show) {
       loading.style.display = show ? "flex" : "none";
     }
 
-    // aplica cor ao select
+    // carregar dados (exemplo mockado, aqui puxaria via fetch do GAS)
+    const dados = [
+      {id:1, data:"2025-09-10", solicitante:"João", setor:"Cozinha", produto:"Arroz 5kg", qtd:10, status:"PENDENTE"},
+      {id:2, data:"2025-09-10", solicitante:"Maria", setor:"Bebidas", produto:"Feijão 1kg", qtd:20, status:"ENTREGUE"},
+    ];
+
+    function renderTabela(lista) {
+      tabela.innerHTML = "";
+      lista.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-id", item.id);
+        tr.innerHTML = `
+          <td>${item.data}</td>
+          <td>${item.solicitante}</td>
+          <td>${item.setor}</td>
+          <td>${item.produto}</td>
+          <td>${item.qtd}</td>
+          <td>
+            <select class="statusSelect">
+              <option value="PENDENTE" ${item.status==="PENDENTE"?"selected":""}>PENDENTE</option>
+              <option value="NEGAR" ${item.status==="NEGAR"?"selected":""}>NEGAR</option>
+              <option value="ENTREGUE" ${item.status==="ENTREGUE"?"selected":""}>ENTREGUE</option>
+            </select>
+          </td>
+          <td>
+            <button class="btn-comprar">COMPRAR</button>
+          </td>
+        `;
+        tabela.appendChild(tr);
+      });
+      inicializarEventos();
+    }
+
+    function inicializarEventos() {
+      // aplicar cores iniciais
+      document.querySelectorAll(".statusSelect").forEach(select => {
+        applyColor(select);
+        select.addEventListener("change", function() {
+          const row = this.closest("tr");
+          const id = row.getAttribute("data-id");
+          atualizarStatus(id, this.value);
+          applyColor(this);
+        });
+      });
+
+      // botões comprar
+      document.querySelectorAll(".btn-comprar").forEach(btn => {
+        btn.addEventListener("click", function() {
+          const row = this.closest("tr");
+          const id = row.getAttribute("data-id");
+          atualizarStatus(id, "COMPRAR");
+        });
+      });
+    }
+
     function applyColor(select) {
       select.className = "statusSelect status-" + select.value;
     }
 
-    // inicializa selects
-    document.querySelectorAll(".statusSelect").forEach(select => {
-      applyColor(select);
-      select.addEventListener("change", function() {
-        const row = this.closest("tr");
-        const itemId = row.getAttribute("data-id");
-        const novoStatus = this.value;
-
-        applyColor(this);
-        atualizarStatus(itemId, novoStatus);
-      });
-    });
-
-    // inicializa botões comprar
-    document.querySelectorAll(".btn-comprar").forEach(btn => {
-      btn.addEventListener("click", function() {
-        const row = this.closest("tr");
-        const itemId = row.getAttribute("data-id");
-        atualizarStatus(itemId, "COMPRAR");
-      });
-    });
-
-    // função de atualização no backend
     function atualizarStatus(id, status) {
       showLoading(true);
       console.log("Atualizando:", id, status);
-
       fetch(ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: id, status: status })
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({id:id, status:status})
       })
-      .then(r => r.json())
-      .then(data => {
-        console.log("Resposta do servidor:", data);
+      .then(r=>r.json())
+      .then(resp=>{
+        console.log("Servidor:", resp);
         showLoading(false);
-        alert("Status atualizado para: " + status);
+        alert("Status atualizado para " + status);
       })
-      .catch(err => {
-        console.error("Erro:", err);
+      .catch(err=>{
+        console.error(err);
         showLoading(false);
-        alert("Erro ao atualizar status!");
+        alert("Erro ao atualizar!");
       });
     }
+
+    // inicial
+    renderTabela(dados);
   </script>
 </body>
 </html>
