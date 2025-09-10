@@ -7,7 +7,7 @@
   <style>
     :root {
       --bg:#f6f7fb; --surface:#fff; --text:#0f172a; --line:#e5e7eb;
-      --blue:#2563eb; --danger:#dc2626; --green:#16a34a; --yellow:#f59e0b; --gray:#9ca3af;
+      --blue:#2563eb; --danger:#dc2626; --green:#16a34a; --yellow:#f59e0b; --gray:#9ca3af; --purple:#6b21a8;
     }
     body { font-family: Arial, sans-serif; background: var(--bg); margin:0; padding:10px; color:var(--text);}
     h2 { text-align:center; margin:10px 0 20px; font-size:1.5rem; }
@@ -29,7 +29,7 @@
     .status-PENDENTE { background:#fef3c7; color:#92400e; }
     .status-NEGAR { background:#fee2e2; color:#991b1b; }
     .status-ENTREGUE { background:#dcfce7; color:#166534; }
-    .status-COMPRAR { background:#f3e8ff; color:#6b21a8; }
+    .status-COMPRAR { background:#f3e8ff; color:var(--purple); }
 
     /* botão comprar */
     .btn-comprar {
@@ -63,7 +63,7 @@
     <select id="filtroSolicitante"><option value="">Todos Solicitantes</option></select>
     <select id="filtroSetor"><option value="">Todos Setores</option></select>
     <select id="filtroStatus">
-      <option value="PROCESSANDO">Processando</option>
+      <option value="PROCESSANDO" selected>Processando</option>
       <option value="">Todos</option>
       <option value="PENDENTE">Pendentes</option>
       <option value="NEGAR">Negados</option>
@@ -92,35 +92,26 @@
   <div id="loading">Carregando...</div>
 
   <script>
-    const ENDPOINT = "https://script.google.com/macros/s/AKfycbyXWAzwlAYOZoVsjHXrpOl2q1HQ3uDwF4_5aDvC2sHd1sbufyxLVXxr1hMbsOZsdm7dwg/exec";
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbwBgdgW5qBkaSSWLNTGc-oACJ-QAy_WOAyhYOKn0hdYYHD7HPkSLg3AE1QPxldp2hgJ/exec"; // <<< troque pelo seu WebApp do GAS
     const tabela = document.querySelector("#tabelaRequisicoes tbody");
     const loading = document.getElementById("loading");
 
     function showLoading(show){ loading.style.display = show ? "flex" : "none"; }
     function applyColor(select){ select.className = "statusSelect status-" + select.value; }
 
-    // Converter ISO → dd/MM/yyyy HH:mm
-    function formatarDataHora(iso){
-      if(!iso) return "";
-      const d = new Date(iso);
-      const data = d.toLocaleDateString("pt-BR");
-      const hora = d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-      return `${data} ${hora}`;
-    }
-
     function renderTabela(lista){
       tabela.innerHTML = "";
-      lista.forEach((r,i)=>{
+      lista.forEach((r)=>{
         const obj = {
-          id: i+2, // linha na planilha
-          timestamp: formatarDataHora(r[0]),
-          produto: r[1],
-          unidade: r[2],
-          quantidade: r[3],
-          setor: r[4],
-          solicitante: r[5],
-          observacoes: r[6],
-          status: r[7]
+          id: r.id,
+          timestamp: r.data,
+          produto: r.produto,
+          unidade: r.unidade,
+          quantidade: r.quantidade,
+          setor: r.setor,
+          solicitante: r.solicitante,
+          observacoes: r.observacoes,
+          status: r.status
         };
 
         const tr = document.createElement("tr");
@@ -198,8 +189,8 @@
     }
 
     function preencherFiltros(data){
-      const solicitantes = [...new Set(data.map(r=>r[5]))].filter(Boolean);
-      const setores = [...new Set(data.map(r=>r[4]))].filter(Boolean);
+      const solicitantes = [...new Set(data.map(r=>r.solicitante))].filter(Boolean);
+      const setores = [...new Set(data.map(r=>r.setor))].filter(Boolean);
       preencherSelect("filtroSolicitante",solicitantes);
       preencherSelect("filtroSetor",setores);
     }
