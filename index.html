@@ -2,56 +2,64 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Painel de Requisições</title>
+  <title>Painel do Estoquista - Requisições</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     :root {
-      --bg:#f6f7fb; 
-      --surface:#fff; 
-      --text:#0f172a; 
-      --line:#e5e7eb;
-      --blue:#2563eb; 
+      --bg:#f6f7fb; --surface:#fff; --text:#0f172a; --line:#e5e7eb;
+      --blue:#2563eb; --danger:#dc2626; --green:#16a34a; --yellow:#f59e0b;
     }
     body {
       font-family: Arial, sans-serif;
-      background: var(--bg);
-      margin: 0;
-      padding: 20px;
-      color: var(--text);
+      background: var(--bg); margin:0; padding:20px; color:var(--text);
     }
-    h2 { text-align: center; margin-bottom: 20px; }
+    h2 { text-align:center; margin-bottom:20px; }
+    .filtros { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+    .filtros select, .filtros input {
+      padding:6px 10px; border:1px solid var(--line); border-radius:6px;
+    }
     table {
-      width: 100%; border-collapse: collapse;
-      background: var(--surface);
-      box-shadow: 0 2px 8px rgba(0,0,0,.08);
-      border-radius: 8px; overflow: hidden;
+      width:100%; border-collapse:collapse; background:var(--surface);
+      box-shadow:0 2px 8px rgba(0,0,0,.08); border-radius:8px; overflow:hidden;
     }
-    th, td { padding: 10px; border-bottom: 1px solid var(--line); }
-    th { background: var(--blue); color: #fff; }
+    th, td { padding:10px; border-bottom:1px solid var(--line); text-align:left; }
+    th { background:var(--blue); color:#fff; }
     select.statusSelect {
-      padding: 6px 10px; border-radius: 6px;
-      font-weight: bold; cursor: pointer;
+      padding:6px 10px; border-radius:6px; font-weight:bold; cursor:pointer;
     }
     .status-PENDENTE { background:#fef3c7; color:#92400e; }
     .status-NEGAR { background:#fee2e2; color:#991b1b; }
     .status-ENTREGUE { background:#dcfce7; color:#166534; }
     .btn-comprar {
-      padding: 6px 14px; border: none; border-radius: 6px;
-      cursor: pointer; font-weight: bold;
-      background: var(--blue); color: #fff;
+      padding:6px 14px; border:none; border-radius:6px; cursor:pointer;
+      font-weight:bold; background:var(--blue); color:#fff; transition:.2s;
     }
+    .btn-comprar:hover { background:#1d4ed8; }
     #loading {
-      display:none; position:fixed; inset:0;
-      background:rgba(255,255,255,0.7); z-index:999;
-      justify-content:center; align-items:center;
+      display:none; position:fixed; inset:0; background:rgba(255,255,255,0.7);
+      z-index:999; justify-content:center; align-items:center;
       font-size:18px; color:var(--blue); font-weight:bold;
     }
   </style>
 </head>
 <body>
-  <h2>Painel de Requisições</h2>
-  <div id="loading">Carregando...</div>
+  <h2>Painel do Estoquista</h2>
 
+  <!-- Filtros -->
+  <div class="filtros">
+    <input type="date" id="filtroData">
+    <select id="filtroSolicitante"><option value="">Todos Solicitantes</option></select>
+    <select id="filtroSetor"><option value="">Todos Setores</option></select>
+    <select id="filtroStatus">
+      <option value="PENDENTE">Pendentes</option>
+      <option value="">Todos</option>
+      <option value="NEGAR">Negados</option>
+      <option value="ENTREGUE">Entregues</option>
+      <option value="COMPRAR">Compras</option>
+    </select>
+  </div>
+
+  <!-- Tabela -->
   <table id="tabelaRequisicoes">
     <thead>
       <tr>
@@ -67,17 +75,18 @@
     <tbody></tbody>
   </table>
 
+  <!-- Loading -->
+  <div id="loading">Carregando...</div>
+
   <script>
-    const ENDPOINT = "https://script.google.com/macros/s/AKfycbyXFEAq56G7oQdeCzGw_SdOnQ7XkRPMzBoS1V09Pkk_wI916FGO9nn4e9FfeNmv8KV9KA/exec"; // troque pela URL do seu Apps Script
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbyTIKEAmujIRhMS5KVfow-LHIitdhh4v0TyIsCqtaDb1sFYOJORX59z76Xyffp0__Y/exec"; // troque pela URL do Apps Script
     const tabela = document.querySelector("#tabelaRequisicoes tbody");
     const loading = document.getElementById("loading");
 
     function showLoading(show){ loading.style.display = show ? "flex" : "none"; }
-
-    // aplica cor do status
     function applyColor(select){ select.className = "statusSelect status-" + select.value; }
 
-    // renderiza linhas
+    // renderizar linhas
     function renderTabela(lista){
       tabela.innerHTML = "";
       lista.forEach(item=>{
@@ -96,14 +105,14 @@
               <option value="ENTREGUE" ${item.status==="ENTREGUE"?"selected":""}>ENTREGUE</option>
             </select>
           </td>
-          <td><button class="btn-comprar">COMPRAR</button></td>
+          <td><button class="btn-comprar ${item.comprar==="SIM"?"ativo":""}">COMPRAR</button></td>
         `;
         tabela.appendChild(tr);
       });
       inicializarEventos();
     }
 
-    // inicializa eventos após render
+    // inicializa eventos pós-render
     function inicializarEventos(){
       document.querySelectorAll(".statusSelect").forEach(select=>{
         applyColor(select);
@@ -121,13 +130,13 @@
       });
     }
 
-    // busca dados da planilha
+    // carregar dados do GAS
     function carregarDados(){
       showLoading(true);
       fetch(ENDPOINT)
         .then(r=>r.json())
         .then(data=>{
-          renderTabela(data);
+          aplicarFiltros(data);
           showLoading(false);
         })
         .catch(err=>{
@@ -137,7 +146,7 @@
         });
     }
 
-    // atualiza status no backend
+    // atualizar status na planilha
     function atualizarStatus(id,status){
       showLoading(true);
       fetch(ENDPOINT,{
@@ -146,10 +155,7 @@
         body:JSON.stringify({id:id,status:status})
       })
       .then(r=>r.json())
-      .then(resp=>{
-        console.log("Atualizado:",resp);
-        carregarDados(); // recarrega a tabela após update
-      })
+      .then(()=>carregarDados())
       .catch(err=>{
         console.error(err);
         showLoading(false);
@@ -157,8 +163,47 @@
       });
     }
 
-    // inicia
-    carregarDados();
+    // aplicar filtros locais
+    function aplicarFiltros(data){
+      const fData = document.getElementById("filtroData").value;
+      const fSolic = document.getElementById("filtroSolicitante").value;
+      const fSetor = document.getElementById("filtroSetor").value;
+      const fStatus = document.getElementById("filtroStatus").value;
+
+      let filtrado = data;
+      if(fData) filtrado = filtrado.filter(r=>r.data===fData);
+      if(fSolic) filtrado = filtrado.filter(r=>r.solicitante===fSolic);
+      if(fSetor) filtrado = filtrado.filter(r=>r.setor===fSetor);
+      if(fStatus) {
+        if(fStatus==="COMPRAR") filtrado = filtrado.filter(r=>r.comprar==="SIM");
+        else filtrado = filtrado.filter(r=>r.status===fStatus);
+      }
+
+      renderTabela(filtrado);
+
+      // preencher filtros dinâmicos
+      preencherSelect("filtroSolicitante",[...new Set(data.map(r=>r.solicitante))]);
+      preencherSelect("filtroSetor",[...new Set(data.map(r=>r.setor))]);
+    }
+
+    function preencherSelect(id,values){
+      const sel = document.getElementById(id);
+      const current = sel.value;
+      sel.innerHTML = `<option value="">Todos</option>`;
+      values.forEach(v=> sel.innerHTML += `<option value="${v}">${v}</option>`);
+      sel.value = current;
+    }
+
+    // eventos filtros
+    document.querySelectorAll(".filtros select, .filtros input").forEach(el=>{
+      el.addEventListener("change",carregarDados);
+    });
+
+    // inicia: filtro padrão = PENDENTE
+    window.onload = ()=>{
+      document.getElementById("filtroStatus").value = "PENDENTE";
+      carregarDados();
+    };
   </script>
 </body>
 </html>
