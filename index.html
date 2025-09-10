@@ -12,18 +12,15 @@
     body { font-family: Arial, sans-serif; background: var(--bg); margin:0; padding:10px; color:var(--text);}
     h2 { text-align:center; margin:10px 0 20px; font-size:1.5rem; }
 
-    /* filtros */
     .filtros { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px; justify-content:center; }
     .filtros select, .filtros input {
       padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:0.95rem;
     }
 
-    /* tabela */
     table { width:100%; border-collapse:collapse; background:var(--surface); box-shadow:0 2px 8px rgba(0,0,0,.08); border-radius:10px; overflow:hidden; }
     th, td { padding:12px; border-bottom:1px solid var(--line); text-align:left; font-size:0.95rem; }
     th { background:var(--blue); color:#fff; font-size:1rem; }
 
-    /* status select */
     select.statusSelect { padding:6px 10px; border-radius:8px; font-weight:bold; cursor:pointer; }
     .status-PROCESSANDO { background:#dbeafe; color:#1e40af; }
     .status-PENDENTE { background:#fef3c7; color:#92400e; }
@@ -31,21 +28,18 @@
     .status-ENTREGUE { background:#dcfce7; color:#166534; }
     .status-COMPRAR { background:#f3e8ff; color:var(--purple); }
 
-    /* botão comprar */
     .btn-comprar {
       padding:8px 16px; border:none; border-radius:8px; cursor:pointer;
       font-weight:bold; background:var(--blue); color:#fff; transition:.2s; font-size:0.9rem;
     }
     .btn-comprar:hover { background:#1d4ed8; }
 
-    /* loading */
     #loading {
       display:none; position:fixed; inset:0; background:rgba(255,255,255,0.7);
       z-index:999; justify-content:center; align-items:center;
       font-size:20px; color:var(--blue); font-weight:bold;
     }
 
-    /* responsivo tablet */
     @media (max-width: 1024px) {
       th, td { font-size:0.85rem; padding:8px; }
       h2 { font-size:1.2rem; }
@@ -57,13 +51,12 @@
 <body>
   <h2>Painel do Estoquista</h2>
 
-  <!-- Filtros -->
   <div class="filtros">
     <input type="date" id="filtroData">
     <select id="filtroSolicitante"><option value="">Todos Solicitantes</option></select>
     <select id="filtroSetor"><option value="">Todos Setores</option></select>
     <select id="filtroStatus">
-      <option value="PROCESSANDO" selected>Processando</option>
+      <option value="PROCESSANDO">Processando</option>
       <option value="">Todos</option>
       <option value="PENDENTE">Pendentes</option>
       <option value="NEGAR">Negados</option>
@@ -72,16 +65,16 @@
     </select>
   </div>
 
-  <!-- Tabela -->
   <table id="tabelaRequisicoes">
     <thead>
       <tr>
         <th>Data</th>
-        <th>Solicitante</th>
-        <th>Setor</th>
         <th>Produto</th>
-        <th>Quantidade</th>
         <th>Unidade</th>
+        <th>Quantidade</th>
+        <th>Setor</th>
+        <th>Solicitante</th>
+        <th>Observações</th>
         <th>Status</th>
         <th>Ações</th>
       </tr>
@@ -92,50 +85,26 @@
   <div id="loading">Carregando...</div>
 
   <script>
-    const ENDPOINT = "https://script.google.com/macros/s/AKfycbwYHmAKrTlfd2rG4-hP-1Ve26Tjkgt1BSC7oN6Skn7Tsm_a-oiqYd9RJ5eUQ5pKuq5yaQ/exec"; // <<< troque pelo seu WebApp do GAS
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbx5v16MgbmPhKdaotml-T4KtbUfdk3AR6sW51cgHxpMBGPF7It1masz7CMfwWh4KgNm_g/exec";
     const tabela = document.querySelector("#tabelaRequisicoes tbody");
     const loading = document.getElementById("loading");
 
     function showLoading(show){ loading.style.display = show ? "flex" : "none"; }
     function applyColor(select){ select.className = "statusSelect status-" + select.value; }
 
-  function renderTabela(lista){
-  tabela.innerHTML = "";
-  lista.forEach((obj)=>{
-    const tr = document.createElement("tr");
-    tr.setAttribute("data-id", obj.id);
-    tr.innerHTML = `
-      <td>${obj.data}</td>
-      <td>${obj.solicitante||""}</td>
-      <td>${obj.setor||""}</td>
-      <td>${obj.produto||""}</td>
-      <td>${obj.quantidade||""}</td>
-      <td>${obj.unidade||""}</td>
-      <td>
-        <select class="statusSelect">
-          <option value="PROCESSANDO" ${obj.status==="PROCESSANDO"?"selected":""}>PROCESSANDO</option>
-          <option value="PENDENTE" ${obj.status==="PENDENTE"?"selected":""}>PENDENTE</option>
-          <option value="NEGAR" ${obj.status==="NEGAR"?"selected":""}>NEGAR</option>
-          <option value="ENTREGUE" ${obj.status==="ENTREGUE"?"selected":""}>ENTREGUE</option>
-        </select>
-      </td>
-      <td><button class="btn-comprar">COMPRAR</button></td>
-    `;
-    tabela.appendChild(tr);
-  });
-  inicializarEventos();
-}
-
-
+    function renderTabela(lista){
+      tabela.innerHTML = "";
+      lista.forEach((obj)=>{
         const tr = document.createElement("tr");
         tr.setAttribute("data-id", obj.id);
         tr.innerHTML = `
-          <td>${obj.timestamp}</td>
-          <td>${obj.solicitante||""}</td>
-          <td>${obj.setor||""}</td>
+          <td>${obj.data||""}</td>
           <td>${obj.produto||""}</td>
-          <td>${obj.quantidade||""}</td>
           <td>${obj.unidade||""}</td>
+          <td>${obj.quantidade||""}</td>
+          <td>${obj.setor||""}</td>
+          <td>${obj.solicitante||""}</td>
+          <td>${obj.observacoes||""}</td>
           <td>
             <select class="statusSelect">
               <option value="PROCESSANDO" ${obj.status==="PROCESSANDO"?"selected":""}>PROCESSANDO</option>
